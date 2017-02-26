@@ -18,7 +18,7 @@ namespace EFDemo.Controllers
             this.db = db;
         }
 
-        // GET api/values
+        // GET api/products
         [HttpGet]
         public IEnumerable<Product> Get()
         {
@@ -29,7 +29,7 @@ namespace EFDemo.Controllers
             return items;
         }
 
-        // GET api/values/1
+        // GET api/products/1
         [HttpGet("{id}")]
         public IActionResult Get([FromRoute]int id)
         {
@@ -45,7 +45,7 @@ namespace EFDemo.Controllers
             return Ok(item);
         }
 
-        // POST api/values
+        // POST api/products
         [HttpPost]
         public IActionResult Post([FromBody]ProductWriteVm newProduct)
         {
@@ -67,7 +67,7 @@ namespace EFDemo.Controllers
             {
                 Name = newProduct.Name,
                 Price = newProduct.Price,
-                InStock = newProduct.InStock                
+                InStock = newProduct.InStock
             };
 
             // Attach product to DB
@@ -80,6 +80,37 @@ namespace EFDemo.Controllers
             db.SaveChanges();
 
             return Created("api/products" + product.Id, product);
+        }
+
+        // PUT api/products/1
+        [HttpPut("{id}")]
+        public IActionResult Put([FromRoute]int id, [FromBody]ProductWriteVm newProduct)
+        {
+            // Exercise ModelState Validation
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // Get existing product from DB
+            var product = db.Products.FirstOrDefault(x => x.Id == id);
+
+            // Verify that the product exist
+            if (product == null)
+            {
+                return NotFound();
+            }
+
+            // Assign updated Properties
+            product.Name = newProduct.Name;
+            product.Price = newProduct.Price;
+            product.InStock = newProduct.InStock;
+            product.Category = db.Categories.FirstOrDefault(x => x.Id == newProduct.CategoryId);
+
+            // Save
+            db.SaveChanges();
+
+            return NoContent();
         }
     }
 }

@@ -20,7 +20,7 @@ namespace EFDemo.Controllers
             this.db = db;
         }
 
-        // GET api/values
+        // GET api/categories
         [HttpGet]
         public IEnumerable<Category> Get()
         {
@@ -31,7 +31,7 @@ namespace EFDemo.Controllers
             return items;
         }
 
-        // GET api/values/1
+        // GET api/categories/1
         [HttpGet("{id}")]
         public IActionResult Get([FromRoute]int id)
         {
@@ -47,7 +47,7 @@ namespace EFDemo.Controllers
             return Ok(item);
         }
 
-        // POST api/values
+        // POST api/categories
         [HttpPost]
         public IActionResult Post([FromBody]CategoryWriteVm newCategory)
         {
@@ -80,6 +80,43 @@ namespace EFDemo.Controllers
             db.SaveChanges();
 
             return Created("api/categories" + category.Id, category);
+        }
+
+        // PUT api/categories/1
+        [HttpPut("{id}")]
+        public IActionResult Put([FromRoute]int id, [FromBody]CategoryWriteVm newCategory)
+        {
+            // Exercise ModelState Validation
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // Get existing category from DB
+            var category = db.Categories
+                .Include(x => x.Products)
+                .FirstOrDefault(x => x.Id == id);
+
+            // Verify that the category exist
+            if (category == null)
+            {
+                return NotFound();
+            }
+
+            // Assign updated Properties
+            category.Name = newCategory.Name;
+
+            var products = db.Products.Where(x => newCategory.ProductIds.Contains(x.Id));
+
+            foreach (var product in products)
+            {
+                category.Products.Add(product);
+            }
+            
+            // Save
+            db.SaveChanges();
+
+            return NoContent();
         }
     }
 }
