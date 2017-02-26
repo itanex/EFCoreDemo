@@ -1,5 +1,6 @@
 ﻿using EFDemo.Data;
 using EFDemo.Models;
+using EFDemo.Repository;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -11,18 +12,18 @@ namespace EFDemo.Controllers
     [Route("api/[controller]")]
     public class ProductsController : Controller
     {
-        private ApplicationDbContext db;
+        private IGenericRepository repo;
 
-        public ProductsController(ApplicationDbContext db)
+        public ProductsController(IGenericRepository repo)
         {
-            this.db = db;
+            this.repo = repo;
         }
 
         // GET api/products
         [HttpGet]
         public IEnumerable<ProductReadVm> Get()
         {
-            var items = db.Products
+            var items = repo.Read<Product>()
                 .Include(x => x.Category)
                 .Select(p => new ProductReadVm()
                 {
@@ -44,7 +45,7 @@ namespace EFDemo.Controllers
         [HttpGet("{id}")]
         public IActionResult Get([FromRoute]int id)
         {
-            var item = db.Products
+            var item = repo.Read<Product>()
                 .Include(x => x.Category)
                 .FirstOrDefault(x => x.Id == id);
 
@@ -78,7 +79,7 @@ namespace EFDemo.Controllers
             }
 
             // Verify that the product does not already exist
-            if (db.Products.Any(x => x.Name.Equals(newProduct.Name, StringComparison.OrdinalIgnoreCase)))
+            if (repo.Read<Product>().Any(x => x.Name.Equals(newProduct.Name, StringComparison.OrdinalIgnoreCase)))
             {
                 // Should be 409 - Conflict not 400 - Bad Request
                 return BadRequest("Object Already Exists");
@@ -92,14 +93,11 @@ namespace EFDemo.Controllers
                 InStock = newProduct.InStock
             };
 
-            // Attach product to DB
-            db.Products.Add(product);
-
             // Associate any provided products
-            product.Category = db.Categories.FirstOrDefault(x => x.Id == newProduct.CategoryId);
+            product.Category = repo.Read<Category>().FirstOrDefault(x => x.Id == newProduct.CategoryId);
 
-            // Save
-            db.SaveChanges();
+            // Attach product to DB
+            repo.Create(product);
 
             return Created("api/products" + product.Id, product);
         }
@@ -115,7 +113,7 @@ namespace EFDemo.Controllers
             }
 
             // Get existing product from DB
-            var product = db.Products
+            var product = repo.Read<Product>()
                 .Include(x=> x.Category)
                 .FirstOrDefault(x => x.Id == id);
 
@@ -129,10 +127,9 @@ namespace EFDemo.Controllers
             product.Name = newProduct.Name;
             product.Price = newProduct.Price;
             product.InStock = newProduct.InStock;
-            product.Category = db.Categories.FirstOrDefault(x => x.Id == newProduct.CategoryId);
+            product.Category = repo.Read<Category>().FirstOrDefault(x => x.Id == newProduct.CategoryId);
 
-            // Save
-            db.SaveChanges();
+            repo.Update(product);
 
             return NoContent();
         }
@@ -141,7 +138,7 @@ namespace EFDemo.Controllers
         [HttpDelete("{id}")]
         public IActionResult Delete([FromRoute]int id)
         {
-            var item = db.Products
+            var item = repo.Read<Product>()
                 // Because there are no tables connecting to Product.Id
                 // We do not need to include anything to insure deletion
                 .FirstOrDefault(x => x.Id == id);
@@ -151,8 +148,7 @@ namespace EFDemo.Controllers
                 return NotFound();
             }
 
-            db.Remove(item);
-            db.SaveChanges();
+            repo.Delete(item);
 
             return NoContent();
         }

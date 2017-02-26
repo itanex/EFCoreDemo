@@ -1,30 +1,27 @@
-﻿using EFDemo.Data;
-using EFDemo.Models;
-using Microsoft.AspNetCore.Antiforgery;
+﻿using EFDemo.Models;
+using EFDemo.Repository;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace EFDemo.Controllers
 {
     [Route("api/[controller]")]
     public class CategoriesController : Controller
     {
-        private ApplicationDbContext db;
+        private IGenericRepository repo;
 
-        public CategoriesController(ApplicationDbContext db)
+        public CategoriesController(IGenericRepository repo)
         {
-            this.db = db;
+            this.repo = repo;
         }
 
         // GET api/categories
         [HttpGet]
         public IEnumerable<CategoryReadVm> Get()
         {
-            var items = db.Categories
+            var items = repo.Read<Category>()
                 .Include(x => x.Products)
                 .Select(c => new CategoryReadVm()
                 {
@@ -46,7 +43,7 @@ namespace EFDemo.Controllers
         [HttpGet("{id}")]
         public IActionResult Get([FromRoute]int id)
         {
-            var item = db.Categories
+            var item = repo.Read<Category>()
                 .Include(x => x.Products)
                 .FirstOrDefault(x => x.Id == id);
 
@@ -80,7 +77,7 @@ namespace EFDemo.Controllers
             }
 
             // Verify that the category does not already exist
-            if (db.Categories.Any(x => x.Name == newCategory.Name))
+            if (repo.Read<Category>().Any(x => x.Name == newCategory.Name))
             {
                 // Should be 409 - Conflict not 400 - Bad Request
                 return BadRequest("Object Already Exists");
@@ -92,14 +89,11 @@ namespace EFDemo.Controllers
                 Name = newCategory.Name
             };
 
-            // Attach category to DB
-            db.Categories.Add(category);
-
             // Associate any provided products
-            category.Products = db.Products.Where(x => newCategory.ProductIds.Contains(x.Id)).ToArray();
+            category.Products = repo.Read<Product>().Where(x => newCategory.ProductIds.Contains(x.Id)).ToArray();
 
-            // Save
-            db.SaveChanges();
+            // Attach category to DB
+            repo.Create(category);
 
             return Created("api/categories" + category.Id, category);
         }
@@ -115,7 +109,7 @@ namespace EFDemo.Controllers
             }
 
             // Get existing category from DB
-            var category = db.Categories
+            var category = repo.Read<Category>()
                 .Include(x => x.Products)
                 .FirstOrDefault(x => x.Id == id);
 
@@ -128,18 +122,17 @@ namespace EFDemo.Controllers
             // Assign updated Properties
             category.Name = newCategory.Name;
 
-            foreach (var product in db.Products.Where(x => newCategory.ProductIds.Contains(x.Id)))
+            foreach (var product in repo.Read<Product>().Where(x => newCategory.ProductIds.Contains(x.Id)))
             {
                 category.Products.Add(product);
             }
 
-            foreach (var product in db.Products.Where(x => newCategory.RemoveProductIds.Contains(x.Id)))
+            foreach (var product in repo.Read<Product>().Where(x => newCategory.RemoveProductIds.Contains(x.Id)))
             {
                 category.Products.Remove(product);
             }
 
-            // Save
-            db.SaveChanges();
+            repo.Update(category);
 
             return NoContent();
         }
@@ -148,7 +141,7 @@ namespace EFDemo.Controllers
         [HttpDelete("{id}")]
         public IActionResult Delete([FromRoute]int id)
         {
-            var item = db.Categories
+            var item = repo.Read<Category>()
                 // Because of the relationship, if we do not include products 
                 // which has a foreign keys we cannot remove the category
                 .Include(x => x.Products)
@@ -159,8 +152,7 @@ namespace EFDemo.Controllers
                 return NotFound();
             }
 
-            db.Remove(item);
-            db.SaveChanges();
+            repo.Delete(item);
 
             return NoContent();
         }
