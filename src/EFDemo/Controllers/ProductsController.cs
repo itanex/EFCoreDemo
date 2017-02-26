@@ -20,11 +20,22 @@ namespace EFDemo.Controllers
 
         // GET api/products
         [HttpGet]
-        public IEnumerable<Product> Get()
+        public IEnumerable<ProductReadVm> Get()
         {
             var items = db.Products
                 .Include(x => x.Category)
-                .ToList();
+                .Select(p => new ProductReadVm()
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Price = p.Price,
+                    InStock = p.InStock,
+                    Category = (p.Category == null) ? null : new CategoryReadVm()
+                    {
+                        Id = p.Category.Id,
+                        Name = p.Category.Name
+                    }
+                });
 
             return items;
         }
@@ -42,7 +53,18 @@ namespace EFDemo.Controllers
                 return NotFound();
             }
 
-            return Ok(item);
+            return Ok(new ProductReadVm()
+            {
+                Id = item.Id,
+                Name = item.Name,
+                Price = item.Price,
+                InStock = item.InStock,
+                Category = (item.Category == null) ? null : new CategoryReadVm()
+                {
+                    Id = item.Category.Id,
+                    Name = item.Category.Name
+                }
+            });
         }
 
         // POST api/products
