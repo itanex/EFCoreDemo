@@ -33,7 +33,7 @@ namespace EFDemo.Controllers
 
         // GET api/values/1
         [HttpGet("{id}")]
-        public IActionResult Get(int id)
+        public IActionResult Get([FromRoute]int id)
         {
             var item = db.Categories
                 .Include(x => x.Products)
