@@ -29,6 +29,22 @@ namespace EFDemo.Controllers
             return items;
         }
 
+        // GET api/values/1
+        [HttpGet("{id}")]
+        public IActionResult Get([FromRoute]int id)
+        {
+            var item = db.Products
+                .Include(x => x.Category)
+                .FirstOrDefault(x => x.Id == id);
+
+            if(item == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(item);
+        }
+
         // POST api/values
         [HttpPost]
         public IActionResult Post([FromBody]ProductWriteVm newProduct)

@@ -31,12 +31,28 @@ namespace EFDemo.Controllers
             return items;
         }
 
+        // GET api/values/1
+        [HttpGet("{id}")]
+        public IActionResult Get(int id)
+        {
+            var item = db.Categories
+                .Include(x => x.Products)
+                .FirstOrDefault(x => x.Id == id);
+
+            if(item == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(item);
+        }
+
         // POST api/values
         [HttpPost]
         public IActionResult Post([FromBody]CategoryWriteVm newCategory)
         {
             // Exercise ModelState Validation
-            if(!ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
@@ -56,7 +72,7 @@ namespace EFDemo.Controllers
 
             // Attach category to DB
             db.Categories.Add(category);
-            
+
             // Associate any provided products
             category.Products = db.Products.Where(x => newCategory.ProductIds.Contains(x.Id)).ToArray();
 
