@@ -2,10 +2,10 @@
 
 namespace EFDemo.Models
 {
-    public class CategoryVm
+    public class CategoryReadVm
     {
         public int Id { get; set; }
         public string Name { get; set; }
-        public IEnumerable<ProductVm> Products { get; set; }
+        public IEnumerable<ProductReadVm> Products { get; set; }
     }
 }

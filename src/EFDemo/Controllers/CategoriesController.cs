@@ -13,13 +13,11 @@ namespace EFDemo.Controllers
     [Route("api/[controller]")]
     public class CategoriesController : Controller
     {
-        private IAntiforgery antiforgery;
         private ApplicationDbContext db;
 
-        public CategoriesController(ApplicationDbContext db, IAntiforgery antiforgery)
+        public CategoriesController(ApplicationDbContext db)
         {
             this.db = db;
-            this.antiforgery = antiforgery;
         }
 
         // GET api/values
@@ -33,26 +31,39 @@ namespace EFDemo.Controllers
             return items;
         }
 
-        //// GET api/values
-        //[HttpGet]
-        //public IEnumerable<CategoryVm> Get()
-        //{
-        //    var items = db.Categories
-        //        .Include(x => x.Products)
-        //        .Select(x => new CategoryVm()
-        //        {
-        //            Id = x.Id,
-        //            Name = x.Name,
-        //            Products = x.Products.Select(y => new ProductVm()
-        //            {
-        //                Id = y.Id,
-        //                Name = y.Name,
-        //                Price = y.Price,
-        //                InStock = y.InStock
-        //            })
-        //        });
+        // POST api/values
+        [HttpPost]
+        public IActionResult Post([FromBody]CategoryWriteVm newCategory)
+        {
+            // Exercise ModelState Validation
+            if(!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
 
-        //    return items;
-        //}
+            // Verify that the category does not already exist
+            if (db.Categories.Any(x => x.Name == newCategory.Name))
+            {
+                // Should be 409 - Conflict not 400 - Bad Request
+                return BadRequest("Object Already Exists");
+            }
+
+            // Create a new Category Domain Object
+            var category = new Category()
+            {
+                Name = newCategory.Name
+            };
+
+            // Attach category to DB
+            db.Categories.Add(category);
+            
+            // Associate any provided products
+            category.Products = db.Products.Where(x => newCategory.ProductIds.Contains(x.Id)).ToArray();
+
+            // Save
+            db.SaveChanges();
+
+            return Created("api/categories" + category.Id, category);
+        }
     }
 }
