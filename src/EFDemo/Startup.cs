@@ -1,5 +1,6 @@
 ﻿using EFDemo.Data;
 using EFDemo.Repository;
+using EFDemo.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +27,10 @@ namespace EFDemo
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            // Add Model Services
+            services.AddTransient<CategoryService>();
+            services.AddTransient<ProductService>();
+
             // Add IGeneric Repository
             services.AddTransient<IGenericRepository, GenericRepository>();
 

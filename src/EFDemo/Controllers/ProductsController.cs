@@ -1,71 +1,39 @@
-﻿using EFDemo.Data;
-using EFDemo.Models;
-using EFDemo.Repository;
+﻿using EFDemo.Models;
+using EFDemo.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace EFDemo.Controllers
 {
     [Route("api/[controller]")]
     public class ProductsController : Controller
     {
-        private IGenericRepository repo;
+        private ProductService service;
 
-        public ProductsController(IGenericRepository repo)
+        public ProductsController(ProductService service)
         {
-            this.repo = repo;
+            this.service = service;
         }
 
         // GET api/products
         [HttpGet]
         public IEnumerable<ProductReadVm> Get()
         {
-            var items = repo.Read<Product>()
-                .Include(x => x.Category)
-                .Select(p => new ProductReadVm()
-                {
-                    Id = p.Id,
-                    Name = p.Name,
-                    Price = p.Price,
-                    InStock = p.InStock,
-                    Category = (p.Category == null) ? null : new CategoryReadVm()
-                    {
-                        Id = p.Category.Id,
-                        Name = p.Category.Name
-                    }
-                });
-
-            return items;
+            return service.GetAllProducts();
         }
 
         // GET api/products/1
         [HttpGet("{id}")]
         public IActionResult Get([FromRoute]int id)
         {
-            var item = repo.Read<Product>()
-                .Include(x => x.Category)
-                .FirstOrDefault(x => x.Id == id);
+            var item = service.GetProductById(id);
 
-            if(item == null)
+            if (item == null)
             {
                 return NotFound();
             }
 
-            return Ok(new ProductReadVm()
-            {
-                Id = item.Id,
-                Name = item.Name,
-                Price = item.Price,
-                InStock = item.InStock,
-                Category = (item.Category == null) ? null : new CategoryReadVm()
-                {
-                    Id = item.Category.Id,
-                    Name = item.Category.Name
-                }
-            });
+            return Ok(item);
         }
 
         // POST api/products
@@ -78,26 +46,7 @@ namespace EFDemo.Controllers
                 return BadRequest(ModelState);
             }
 
-            // Verify that the product does not already exist
-            if (repo.Read<Product>().Any(x => x.Name.Equals(newProduct.Name, StringComparison.OrdinalIgnoreCase)))
-            {
-                // Should be 409 - Conflict not 400 - Bad Request
-                return BadRequest("Object Already Exists");
-            }
-
-            // Create a new Product Domain Object
-            var product = new Product()
-            {
-                Name = newProduct.Name,
-                Price = newProduct.Price,
-                InStock = newProduct.InStock
-            };
-
-            // Associate any provided products
-            product.Category = repo.Read<Category>().FirstOrDefault(x => x.Id == newProduct.CategoryId);
-
-            // Attach product to DB
-            repo.Create(product);
+            var product = service.CreateProduct(newProduct);
 
             return Created("api/products" + product.Id, product);
         }
@@ -112,24 +61,14 @@ namespace EFDemo.Controllers
                 return BadRequest(ModelState);
             }
 
-            // Get existing product from DB
-            var product = repo.Read<Product>()
-                .Include(x=> x.Category)
-                .FirstOrDefault(x => x.Id == id);
+            // Update the product
+            var product = service.UpdateProduct(id, newProduct);
 
-            // Verify that the product exist
+            // Verify that the product was updated
             if (product == null)
             {
                 return NotFound();
             }
-
-            // Assign updated Properties
-            product.Name = newProduct.Name;
-            product.Price = newProduct.Price;
-            product.InStock = newProduct.InStock;
-            product.Category = repo.Read<Category>().FirstOrDefault(x => x.Id == newProduct.CategoryId);
-
-            repo.Update(product);
 
             return NoContent();
         }
@@ -138,17 +77,12 @@ namespace EFDemo.Controllers
         [HttpDelete("{id}")]
         public IActionResult Delete([FromRoute]int id)
         {
-            var item = repo.Read<Product>()
-                // Because there are no tables connecting to Product.Id
-                // We do not need to include anything to insure deletion
-                .FirstOrDefault(x => x.Id == id);
+            var success = service.DeleteProduct(id);
 
-            if (item == null)
+            if (!success)
             {
                 return NotFound();
             }
-
-            repo.Delete(item);
 
             return NoContent();
         }

@@ -1,69 +1,39 @@
 ﻿using EFDemo.Models;
-using EFDemo.Repository;
+using EFDemo.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace EFDemo.Controllers
 {
     [Route("api/[controller]")]
     public class CategoriesController : Controller
     {
-        private IGenericRepository repo;
+        private CategoryService service;
 
-        public CategoriesController(IGenericRepository repo)
+        public CategoriesController(CategoryService service)
         {
-            this.repo = repo;
+            this.service = service;
         }
 
         // GET api/categories
         [HttpGet]
         public IEnumerable<CategoryReadVm> Get()
         {
-            var items = repo.Read<Category>()
-                .Include(x => x.Products)
-                .Select(c => new CategoryReadVm()
-                {
-                    Id = c.Id,
-                    Name = c.Name,
-                    Products = c.Products.Select(p => new ProductReadVm()
-                    {
-                        Id = p.Id,
-                        Name = p.Name,
-                        Price = p.Price,
-                        InStock = p.InStock
-                    })
-                });
-
-            return items;
+            return service.GetAllCategories();
         }
 
         // GET api/categories/1
         [HttpGet("{id}")]
         public IActionResult Get([FromRoute]int id)
         {
-            var item = repo.Read<Category>()
-                .Include(x => x.Products)
-                .FirstOrDefault(x => x.Id == id);
+            var item = service.GetCategoryById(id);
 
-            if(item == null)
+            if (item == null)
             {
                 return NotFound();
             }
 
-            return Ok(new CategoryReadVm()
-            {
-                Id = item.Id,
-                Name = item.Name,
-                Products = item.Products.Select(p => new ProductReadVm()
-                {
-                    Id = p.Id,
-                    Name = p.Name,
-                    Price = p.Price,
-                    InStock = p.InStock
-                })
-            });
+            return Ok(item);
         }
 
         // POST api/categories
@@ -76,24 +46,7 @@ namespace EFDemo.Controllers
                 return BadRequest(ModelState);
             }
 
-            // Verify that the category does not already exist
-            if (repo.Read<Category>().Any(x => x.Name == newCategory.Name))
-            {
-                // Should be 409 - Conflict not 400 - Bad Request
-                return BadRequest("Object Already Exists");
-            }
-
-            // Create a new Category Domain Object
-            var category = new Category()
-            {
-                Name = newCategory.Name
-            };
-
-            // Associate any provided products
-            category.Products = repo.Read<Product>().Where(x => newCategory.ProductIds.Contains(x.Id)).ToArray();
-
-            // Attach category to DB
-            repo.Create(category);
+            var category = service.CreateCategory(newCategory);
 
             return Created("api/categories" + category.Id, category);
         }
@@ -108,31 +61,13 @@ namespace EFDemo.Controllers
                 return BadRequest(ModelState);
             }
 
-            // Get existing category from DB
-            var category = repo.Read<Category>()
-                .Include(x => x.Products)
-                .FirstOrDefault(x => x.Id == id);
+            var category = service.UpdateCategory(id, newCategory);
 
-            // Verify that the category exist
+            // Verify that the category was updated
             if (category == null)
             {
                 return NotFound();
             }
-
-            // Assign updated Properties
-            category.Name = newCategory.Name;
-
-            foreach (var product in repo.Read<Product>().Where(x => newCategory.ProductIds.Contains(x.Id)))
-            {
-                category.Products.Add(product);
-            }
-
-            foreach (var product in repo.Read<Product>().Where(x => newCategory.RemoveProductIds.Contains(x.Id)))
-            {
-                category.Products.Remove(product);
-            }
-
-            repo.Update(category);
 
             return NoContent();
         }
@@ -141,18 +76,12 @@ namespace EFDemo.Controllers
         [HttpDelete("{id}")]
         public IActionResult Delete([FromRoute]int id)
         {
-            var item = repo.Read<Category>()
-                // Because of the relationship, if we do not include products 
-                // which has a foreign keys we cannot remove the category
-                .Include(x => x.Products)
-                .FirstOrDefault(x => x.Id == id);
+            var success = service.DeleteCategory(id);
 
-            if (item == null)
+            if (!success)
             {
                 return NotFound();
             }
-
-            repo.Delete(item);
 
             return NoContent();
         }
