@@ -118,5 +118,26 @@ namespace EFDemo.Controllers
 
             return NoContent();
         }
+
+        // DELETE api/categories/1
+        [HttpDelete("{id}")]
+        public IActionResult Delete([FromRoute]int id)
+        {
+            var item = db.Categories
+                // Because of the relationship, if we do not include products 
+                // which has a foreign keys we cannot remove the category
+                .Include(x => x.Products)
+                .FirstOrDefault(x => x.Id == id);
+
+            if (item == null)
+            {
+                return NotFound();
+            }
+
+            db.Remove(item);
+            db.SaveChanges();
+
+            return NoContent();
+        }
     }
 }

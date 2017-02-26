@@ -112,5 +112,26 @@ namespace EFDemo.Controllers
 
             return NoContent();
         }
+
+        // DELETE api/products/1
+        [HttpDelete("{id}")]
+        public IActionResult Delete([FromRoute]int id)
+        {
+            var item = db.Products
+                // Because there are no tables connecting to Product.Id
+                // We do not need to include anything to insure deletion
+                .FirstOrDefault(x => x.Id == id);
+
+            if (item == null)
+            {
+                return NotFound();
+            }
+
+            db.Remove(item);
+            db.SaveChanges();
+
+            return NoContent();
+        }
+
     }
 }
