@@ -106,13 +106,16 @@ namespace EFDemo.Controllers
             // Assign updated Properties
             category.Name = newCategory.Name;
 
-            var products = db.Products.Where(x => newCategory.ProductIds.Contains(x.Id));
-
-            foreach (var product in products)
+            foreach (var product in db.Products.Where(x => newCategory.ProductIds.Contains(x.Id)))
             {
                 category.Products.Add(product);
             }
-            
+
+            foreach (var product in db.Products.Where(x => newCategory.RemoveProductIds.Contains(x.Id)))
+            {
+                category.Products.Remove(product);
+            }
+
             // Save
             db.SaveChanges();
 

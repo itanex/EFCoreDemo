@@ -93,7 +93,9 @@ namespace EFDemo.Controllers
             }
 
             // Get existing product from DB
-            var product = db.Products.FirstOrDefault(x => x.Id == id);
+            var product = db.Products
+                .Include(x=> x.Category)
+                .FirstOrDefault(x => x.Id == id);
 
             // Verify that the product exist
             if (product == null)
@@ -132,6 +134,5 @@ namespace EFDemo.Controllers
 
             return NoContent();
         }
-
     }
 }

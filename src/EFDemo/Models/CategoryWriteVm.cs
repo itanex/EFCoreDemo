@@ -8,5 +8,6 @@ namespace EFDemo.Models
         [Required]
         public string Name { get; set; }
         public IEnumerable<int> ProductIds { get; set; }
+        public IEnumerable<int> RemoveProductIds { get; set; }
     }
 }
